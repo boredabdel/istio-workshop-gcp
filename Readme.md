@@ -1,7 +1,7 @@
-# Istio Workshops on Google Cloud Platform
-This repo contains the code samples and step by step tutorial for the Istio Workshop on Google Cloud Platform (GCP) delivered during the following events:
+# Service Mesh Workshop with Istio on Google Cloud Platform
+This repo contains the code samples and step by step instructions for the Service Mesh Workshop with Istio on Google Cloud Platform (GCP) delivered during the following events:
 
-- [Devoxx Poland 2022] (https://devoxx.pl/talk-details/?id=2840)
+- [Devoxx Poland 2022](https://devoxx.pl/talk-details/?id=2840)
 
 The code in this repo have been forked from [Mohamed Aboullaite](https://github.com/aboullaite/aboullaite) [service-mesh](https://github.com/aboullaite/service-mesh) repo and adapted to work on GKE with Istio.
 
@@ -9,7 +9,7 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 
 ![Sock Shop app](assets/sock-shop.png)
 ## Content
-- [0. Install istio](#0-install-istio)
+- [0. Prepare the environment & Install istio](#0-install-istio)
 - [1. Deployment](#1-deploy-application)
     - [deploy application](#1-deploy-the-application)
     - [Configure Istio virtual services & Distination rules](#2-configure-istio-virtual-services--distination-rules)
@@ -41,8 +41,13 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
     - [2. Grafana](#-2-grafana)
     - [3. Tracing](#3-tracing)
     - [4. Kiali](#4-kiali)
+
 ## 0. Install istio
-1. Refer to [istio docs](https://istio.io/docs/setup/install/) for different methods on how to install istio. Istio will be installed in a deferent namespace called `istio-system`
+At the begining of this workshop, you should have been given credentials for a Google Cloud Platform(GCP) Project to use. Follow the instructions below to provision a Google Kubernetes Cluster(GKE), deploy Istio and verify the environment is ready to start the workshop
+
+1. If you are using Google Chrome, Open the [GCP console](https://console.cloud.google.com/) in an incognito TAB, this way you don't mix your already logged into Google Accounts with the one you are provided in this workshop. Otherwise just open the console in a new TAB. 
+
+Refer to [istio docs](https://istio.io/docs/setup/install/) for different methods on how to install istio. Istio will be installed in a deferent namespace called `istio-system`
 2. Create a namespace for our application and add a namespace label to instruct Istio to automatically inject Envoy sidecar proxies during deployment of sock-shop app. 
 ```bash
 $ kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
