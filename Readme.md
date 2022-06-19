@@ -43,11 +43,24 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
     - [4. Kiali](#4-kiali)
 
 ## 0. Install istio
-At the begining of this workshop, you should have been given credentials for a Google Cloud Platform(GCP) Project to use. Follow the instructions below to provision a Google Kubernetes Cluster(GKE), deploy Istio and verify the environment is ready to start the workshop
+At the begining of this workshop, you should have been given credentials for a Google Cloud Platform(GCP) project to use. 
 
-1. If you are using Google Chrome, Open the [GCP console](https://console.cloud.google.com/) in an incognito TAB, this way you don't mix your already logged into Google Accounts with the one you are provided in this workshop. Otherwise just open the console in a new TAB. 
+Follow the instructions below to provision a Google Kubernetes Cluster(GKE), deploy Istio and verify the environment is ready to start the workshop
 
-Refer to [istio docs](https://istio.io/docs/setup/install/) for different methods on how to install istio. Istio will be installed in a deferent namespace called `istio-system`
+1. Login to the Google Cloud Console:
+    * (Ideally) If you are using Google Chrome, use an incognito TAB and open the [GCP console](https://console.cloud.google.com/welcome?project=XXXXXXX). Replace `XXXXXXX` in the URL with the project ID you are given.
+    * If you are using a a different browser open the console with the URL above in a new TAB. 
+
+`PS: incognito helps you keep your already logged in Google profiles clean.`
+
+2. Use the provided credentials to login to the Google Account. This should bring you to the 
+home page of the Google Cloud Console 
+
+3. from the top right part of the page, click on the `Activate Cloud Shell` Button 
+![Activate Cloud Shell](assets/cloud-shell-icon.png)
+
+
+to [istio docs](https://istio.io/docs/setup/install/) for different methods on how to install istio. Istio will be installed in a deferent namespace called `istio-system`
 2. Create a namespace for our application and add a namespace label to instruct Istio to automatically inject Envoy sidecar proxies during deployment of sock-shop app. 
 ```bash
 $ kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
