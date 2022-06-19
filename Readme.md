@@ -56,10 +56,10 @@ Follow the instructions below to provision a Google Kubernetes Cluster(GKE), dep
 2. Use the provided credentials to login to the Google Account. This should bring you to the 
 home page of the Google Cloud Console 
 
-3. from the top right part of the page, click on the `Activate Cloud Shell` Button
+3. From the top right part of the page, click on the `Activate Cloud Shell` Button
 ![Activate Cloud Shell Button](assets/cloud-shell-icon.png)
 
-Wait few moments, it takes a while for the Cloud Shell to be provisioned. You will be using the Cloud Shell for the remaining of this workshop.
+Wait a few moments, it takes a while for the Cloud Shell to be provisioned. You will be using the Cloud Shell for the remaining of this workshop.
 
 4. Clone this repository in the cloud shell
 ```bash
@@ -71,16 +71,68 @@ cd into the repo folder
 cd istio-workshop-gcp
 ```
 
-2. Create a namespace for our application and add a namespace label to instruct Istio to automatically inject Envoy sidecar proxies during deployment of sock-shop app. 
+5. Create a GKE cluster
 ```bash
-$ kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
+export PROJECT_ID=`gcloud config get-value project` && \
+export M_TYPE=n1-standard-2 && \
+export ZONE=europe-west1-b && \
+export CLUSTER_NAME=istio-workshop-gcp && \
+gcloud services enable container.googleapis.com && \
+gcloud container clusters create $CLUSTER_NAME \
+--cluster-version latest \
+--machine-type=$M_TYPE \
+--num-nodes 4 \
+--zone $ZONE \
+--project $PROJECT_ID
 ```
-You can find more about sidecar injection [here](https://istio.io/docs/setup/additional-setup/sidecar-injection/)
-## 1. Deployment
-No changes we're made to the original k8s manifests from [microservices-demo repo](https://github.com/microservices-demo/microservices-demo) except:
 
-+ updating `Deployment` resources to use the sable api `apps/v1` required since [k8s 1.16](https://kubernetes.io/blog/2019/09/18/kubernetes-1-16-release-announcement/)
-+ added `version: v1` label to all Kubernetes deployments. We need it for Istio `Destination Rules` to work properly
+This command might take a while, you can navigate to the Google Kubernetes Engine page (use the search bar to find it) to check the status of the cluster provisioning, or wait for the command to exit.
+
+At this stage you should have a GKE cluster provisionned in your project.
+
+Run the following command to fetch it's credentials.
+
+```bash
+gcloud container clusters get-credentials istio-workshop-gcp --zone $ZONE
+```
+
+Run `kubectl` to ensure you have access to the cluster.
+
+```bash
+kubectl get nodes
+```
+
+If you see a list of nodes you are good to go. Otherwise stop here and ask one of the workshop facilitators for help.
+
+6. Deploy Istio. 
+
+Istio has many [documentated](https://istio.io/latest/docs/setup/getting-started/#download) ways to be deployed. For the purposes of this workshop, we will use the most straightforward method:
+
+- Download the `istioctl` CLI
+```bash
+curl -L https://istio.io/downloadIstio | sh -
+```
+
+- Move to the Istio Package directory. For example if the package is `1.14.1`
+```bash
+cd istio-1.14.1
+```
+
+- Add the istioctl client to your path (You can make these changes permanent by adding them to your .bashrc or .zshrc)
+```bash
+export PATH=$PWD/bin:$PATH
+```
+- Navigate back to the root of the repo and check istioctl works
+```bash
+cd ..
+istioctl version
+```
+
+If you get a valid output (the istio version), you are good to progress.
+
+## 1. Deployment
+At this stage we are ready to deploy
+
 
 ### 1. deploy app
 ```bash
