@@ -130,26 +130,55 @@ istioctl version
 
 If you get a valid output (the istio version), you are good to progress.
 
+- Now we are ready to deploy Istio to the cluster. We will use the [demo profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for this workshop
+```bash
+istioctl install --set profile=demo -y
+```
+
+Wait for the command to finish and check istio have been deployed by checking the `istio-system` namespace(istio-system is the default namespace where the Istio control plane components are deployed).
+
+```bash
+kubectl get pods -n istio-system
+```
+
+If all pods return a `Running` status, you are good to progress.
+
 ## 1. Deployment
 At this stage we are ready to deploy
 
+### 0. Prepare your namespace
+
+Before we deploy the app, we need to prepare the namespace where it will be deployed, and label it for automatic sidecar injection. You can read more about this [here](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/) but in a nutshell the label will trigger the Istio control plane to automatically inject the sidecars into each pod in the cluster. So you don't have to do it manually.
+
+```bash
+kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
+```
 
 ### 1. deploy app
 ```bash
-$ kubectl apply -f 1-deploy-app/manifests
+kubectl apply -f 1-deploy-app/manifests
 ```
+
+Check everything have been deployed properly
+```bash
+kubectl get pods
+```
+
+There should be 14 pods deployed in total. For each of them look at the `Ready` column. It should have `ready_containers/total_containers` values. That colum reports the containers in a ready stat  over the total containers supposed to be in the pod (including the sidecar). The two values should match before you move on. In other terms a `2/2` is good, while a `1/2` means things are still starting.
+
+Wait until all containers are ready before you progress.
 
 ### 2. Configure Istio virtual services & Distination rules
 ```bash
 $ kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
 ```
-Along with virtual services, destination rules are a key part of Istio’s traffic routing functionality. You can think of virtual services as how you route your traffic to a given destination, and then you use destination rules to configure what happens to traffic for that destination.
+Virtual services and Destination rules are  key part of Istio’s traffic routing functionality. You can think of virtual services as how you route your traffic to a given destination, and then you use destination rules to configure what happens to traffic for that destination.
 
 ### 3. Configure Istio ingress gateway
 ```bash
 $ kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
 ```
-An ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration.
+An Ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration.
 
 ### 4. Verifying our config
 ```bash
