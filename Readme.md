@@ -57,7 +57,8 @@ Follow the instructions below to provision a Google Kubernetes Cluster(GKE), dep
 home page of the Google Cloud Console 
 
 3. from the top right part of the page, click on the `Activate Cloud Shell` Button 
-![Activate Cloud Shell](assets/cloud-shell-icon.png)
+
+(assets/cloud-shell-icon.png)
 
 
 to [istio docs](https://istio.io/docs/setup/install/) for different methods on how to install istio. Istio will be installed in a deferent namespace called `istio-system`
