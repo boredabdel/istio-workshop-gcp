@@ -1,7 +1,11 @@
-# Service Mesh Demo
-This repo contains demo for my talk about service meshes. It is based on [microservices-demo application](https://github.com/microservices-demo/microservices-demo) with some minor changes to make it play nicely with istio. 
+# Istio Workshops on Google Cloud Platform
+This repo contains the code samples and step by step tutorial for the Istio Workshop on Google Cloud Platform (GCP) delivered during the following events:
 
-This demo is deployed and tested with `kubernetes 1.20` and `istio 1.11.3`
+- [Devoxx Poland 2022] (https://devoxx.pl/talk-details/?id=2840)
+
+The code in this repo have been forked from [Mohamed Aboullaite](https://github.com/aboullaite/aboullaite) [service-mesh](https://github.com/aboullaite/service-mesh) repo and adapted to work on GKE with Istio.
+
+This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 
 ![Sock Shop app](assets/sock-shop.png)
 ## Content
