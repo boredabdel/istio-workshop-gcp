@@ -6,7 +6,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      name: catalogue
+      name: front-end
       version: v1
   jwtRules:
   - issuer: "testing@secure.istio.io"
@@ -20,7 +20,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      name: catalogue
+      name: front-end
       version: v1
   action: ALLOW
   rules:

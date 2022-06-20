@@ -146,7 +146,7 @@ If all pods return a `Running` status, you are good to progress.
 ## 1. Deployment
 At this stage we are ready to deploy
 
-#### 0. Prepare your namespace
+### 0. Prepare your namespace
 
 Before we deploy the app, we need to prepare the namespace where it will be deployed, and label it for automatic sidecar injection. You can read more about this [here](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/) but in a nutshell the label will trigger the Istio control plane to automatically inject the sidecars into each pod in the cluster. So you don't have to do it manually.
 
@@ -154,7 +154,7 @@ Before we deploy the app, we need to prepare the namespace where it will be depl
 kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
 ```
 
-#### 1. deploy the app
+### 1. deploy the app
 ```bash
 kubectl apply -f 1-deploy-app/manifests
 ```
@@ -168,19 +168,19 @@ There should be 14 pods deployed in total. For each of them look at the `Ready` 
 
 Wait until all containers are ready before you progress.
 
-#### 2. Configure Istio virtual services & Distination rules
+### 2. Configure Istio virtual services & Distination rules
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
 ```
 Virtual services and Destination rules are  key part of Istio’s traffic routing functionality. You can think of virtual services as how you route your traffic to a given destination, and then you use destination rules to configure what happens to traffic for that destination.
 
-#### 3. Configure the Istio ingress gateway
+### 3. Configure the Istio ingress gateway
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
 ```
 An Ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration.
 
-#### 4. Verifying the config
+### 4. Verifying the config
 ```bash
 $ istioctl proxy-status
 ```
@@ -193,7 +193,7 @@ echo $(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.s
 
 Open a new TAB with the IP Address of the LoadBalancer. The app should be up and running along with some socks :)
 
-#### 5. User accounts
+### 5. User accounts
 
 You can use the following username/password to login to the app
 |Username |	Password|
@@ -218,7 +218,7 @@ There should be a pod called front-end-v2-xxxxxxxxx (xxxxxx is a random string a
 
 Now we have 2 versions of the front-end app running side by side. However if you hit the browser you'll see only the `v1` (blue colored)
 
-#### 1. Blue/Green Deployment
+### 1. Blue/Green Deployment
 Blue-green deployment is a technique that reduces downtime and risk by running two identical production environments called Blue and Green.
 Now let's switch to `v2` (red colored) in the live environment serving all production traffic. 
 ```bash
@@ -231,7 +231,7 @@ kubectl apply -f 2-traffic-management/blue-green/frontv1-virtual-service.yaml
 
 Refresh the app and check that the blue colord versioned is live.
 
-#### 2. Canary deployment
+### 2. Canary deployment
 Istio’s routing rules provides important advantages; you can easily control fine-grained traffic percentages (e.g., route 10% of traffic to the new version of my app).
 
 You can also control traffic using other criteria (e.g., route traffic for specific users to the canary version). To illustrate, let’s look at doing a canary traffic splitting for the `front-end` service.
@@ -242,7 +242,7 @@ kubectl apply -f 2-traffic-management/canary/canary-virtual-service.yaml
 ```
 and refresh the page a couple of times. The majority of pages return `v1` (blue colored), with some `v2` (red colored) from time to time.
 
-#### 3. Route based on some criteria
+### 3. Route based on some criteria
 With istio, we can easily route requests when they meet some criteria. 
 For now we have `v1` and `v2` of the `front-end` service deployed in our clusters, we can forward all users using `Firefox` as a browser to `v2`, and serve `v1` to all other clients:
 ```bash
@@ -251,7 +251,7 @@ kubectl apply -f 2-traffic-management/route-headers/frontv2-virtual-service-fire
 
 If you open the same URL in `Firefox` you should see the red colored version. Using an other browser you will see the blue one.
 
-#### 4. Mirroring
+### 4. Mirroring
 Traffic mirroring (also called shadowing), is a powerful concept that allows feature teams to bring changes to production with as little risk as possible. Mirroring sends a copy of live traffic to a mirrored service. You can then send the traffic to out-of-band of the critical request path for the primary service (to perform Content inspection, Threat monitoring, Troubleshooting, etc...)
 
 ```bash
@@ -266,7 +266,7 @@ kubectl logs -n sock-shop -l name=front-end,version=v2 -f
 
 And open the app and try to navigate to some parts of the menu few times (Exp: Catalogue > Size > Large) and check the logs of the pods for the `v2` app.
 
-#### 5. Clean up
+### 5. Clean up
 ```bash
 kubectl apply -f 2-traffic-management/cleanup-virtual-service.yaml
 kubectl delete -f 2-traffic-management/front-end-dep-v2.yaml  
@@ -319,7 +319,7 @@ Code 503 : 26 (65.0 %)
 
 This is because we run fortio with 4 concurrent requests (`-c 4`) and 40 calls per request (`-n 40`). The circuit was tripped.
 
-### 4. Retries
+### 3. Retries
 Every system has transient failures: network buffers overflow, a server shutting down drops requests, a downstream system fails, and so on.
 
 Istio gives you the ability to configure retries globally for all services in your mesh. More significantally, it allows you to control those retry strategies at runtime via configuration, so you can change client behavior on the fly.
@@ -331,7 +331,7 @@ kubectl apply -f 3-resiliency/retry/retry-virtual-service.yaml
 
 Refresh the page a few times to check.
 
-### 5. Timeouts
+### 4. Timeouts
 Timeouts are important for building systems with consistent behavior. By attaching deadlines to requests, we are able to abandon requests taking too long and free server resources.
 
 Here we configure a virtual service that specifies a 5 second timeout for calls to the `v1` subset of the `catalogue` service:
@@ -353,32 +353,33 @@ kubectl delete -f 3-resiliency/circuit-breaking/fortio.yaml
 
 ### 1. Rate limiting
 Rate limiting is generally put in place as a defensive measure for services. Shared services need to protect themselves from excessive use (whether intended or unintended) to maintain service availability.
+
 #### Global rate limiting
-Before istio 1.5, the recommended way to set up rate limiting in Istio was to use [mixer policy](https://istio.io/docs/tasks/policy-enforcement/rate-limiting/). In `version 1.5` the mixer policy is deprecated and not recommended for production, and the  preferred way is using [Envoy native rate limiting](https://www.envoyproxy.io/docs/envoy/v1.13.0/intro/arch_overview/other_features/global_rate_limiting) instead of mixer rate limiting. 
-There is no native support yet for rate limiting API with Istio. Thus, we'll be using the [Envoy rate limit service](https://github.com/envoyproxy/ratelimit), which is is a Go/gRPC service designed to enable generic rate limit scenarios from different types of applications.
+There is no native support yet for rate limiting in the Istio API. Thus, we will be using the [Envoy rate limit service](https://github.com/envoyproxy/ratelimit), which is is a Go/gRPC service designed to enable generic rate limit scenarios from different types of applications.
 To mimic a real world example, we suppose that we have 2 plans: 
 + Basic: 5 requests pe minute
 + Plus: 20 requests per minute
 
 We configure Envoy rate limiting actions to look for `x-plan` and `x-account` in request headers. We also configure the descriptor match any request with the account and plan keys, such that (`'account', '<unique value>')`, `('plan', 'BASIC | PLUS')`. The `account` key doesn't specify any value, it uses each unique value passed into the rate limiting service to match. The `plan` descriptor key has two values specified and depending on which one matches (BASIC or PLUS) determines the rate limit, either 5 request per minute for `BASIC` or 20 requests per minute for `PLUS`.
-```
-$ kubectl apply -f 4-policy/rate-limiting/global/rate-limit-service.yaml
-$ kubectl apply -f 4-policy/rate-limiting/global/rate-limit-envoy-filter.yaml 
+```bash
+kubectl apply -f 4-policy/rate-limiting/global/rate-limit-service.yaml
+kubectl apply -f 4-policy/rate-limiting/global/rate-limit-envoy-filter.yaml 
 ``` 
-Testing the above scenarios prove that the rate limiting is working
+
+We will use Fortio again to test the above scenarios and prove that the rate limiting works.
 ```bash
 #### DEPLOY FORTIO
-$ kubectl apply -f 4-policy/fortio.yaml 
-$ export INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-$ FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
+kubectl apply -f 4-policy/fortio.yaml 
+export INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
 ####  BASIC PLAN
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 1 -qps 0 -n 2 -loglevel Warning -H "x-plan: BASIC" -H "x-account: user" $INGRESS_IP/catalogue
+kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 1 -qps 0 -n 2 -loglevel Warning -H "x-plan: BASIC" -H "x-account: user" $INGRESS_IP/catalogue
 ...
 Sockets used: 5 (for perfect keepalive, would be 1)
 Code 200 : 1 (50.0 %)
 Code 429 : 1 (50.0 %)
 ### PLUS PLAN
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 1 -qps 0 -n 4 -loglevel Warning -H "x-plan: PLUS" -H "x-account: user2" $INGRESS_IP/catalogue
+kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 1 -qps 0 -n 4 -loglevel Warning -H "x-plan: PLUS" -H "x-account: user2" $INGRESS_IP/catalogue
 ...
 Sockets used: 5 (for perfect keepalive, would be 1)
 Code 200 : 2 (50.0 %)
@@ -398,40 +399,47 @@ You can check in redis how keys are stored:
 ```bash
 export REDIS_POD=$(kubectl get pod -n rate-limit | grep redis | awk '{ print $1 }')
 
-k -n rate-limit exec -it $REDIS_POD -c redis /bin/sh
+kubectl -n rate-limit exec -it $REDIS_POD -c redis /bin/sh
 
 redis-cli
 
 keys *
+```
 
-```
 #### Local rate limiting
-Envoy supports local rate limiting of L4 connections and HTTP requests. This allows  to apply rate limits at the instance level, in the proxy itself, without calling any other service.
-In this example, we are going to enable local rate limiting for any traffic through the `catalogues` service. The local rate limit filter’s token bucket is configured to allow 10 requests/min. The filter is also configured to add an x-local-rate-limit response header to requests that are blocked.
+Envoy supports local rate limiting of L4 connections and HTTP requests. This allows us to apply rate limits at the instance level, in the proxy itself, without calling any other service.
+In this example, we are going to enable local rate limiting for any traffic going through the `catalogues` service. The local rate limit filter’s token bucket is configured to allow 10 requests/min. The filter is also configured to add an x-local-rate-limit response header to requests that are blocked.
+```bash
+kubectl apply -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml 
 ```
-$ kubectl apply -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml 
-```
+
 Testing the above scenarios prove that local rate limiting is working
+
+```bash
+kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -loglevel Warning http://catalogue/tags
 ```
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 4 -qps 0 -n 20 -loglevel Warning http://catalogue/tags
-```
-you shouls ge the below results
+
+You shouls get the output below
+
 ```
 Code 200 : 10 (50.0 %)
 Code 429 : 10 (50.0 %)
 ```
+
 ### 2. CORS
 Cross-Origin Resource Sharing (CORS) is a method of enforcing client-side access controls on resources by specifying external domains that are able to access certain or all routes of your domain. Browsers use the presence of HTTP headers to determine if a response from a different origin is allowed.
 
 For example, the following rule restricts cross origin requests to those originating from `aboullaite.me` domain using HTTP POST/GET, and sets the `Access-Control-Allow-Credentials` header to false. In addition, it only exposes `X-Foo-bar` header and sets an expiry period of 1 day.
 
 ```bash 
-$ kubectl apply -f 4-policy/cors/cors-virtual-service.yaml  
+kubectl apply -f 4-policy/cors/cors-virtual-service.yaml  
 ```
+
 Checking now CORS options to confirm that the config effectively took place
+
 ```bash
 curl -I -X OPTIONS -H 'access-control-request-method: PUT' -H 'origin: http://aboullaite.me' http://$INGRESS_IP/catalogue
-#### should return output below
+#### should return the output below
 HTTP/1.1 200 OK
 access-control-allow-origin: http://aboullaite.me
 access-control-allow-methods: POST,GET
@@ -441,122 +449,154 @@ date: Sat, 23 May 2020 15:40:05 GMT
 server: istio-envoy
 content-length: 0
 ```
+
 ### 3. Clean up
 ```bash
-$ kubectl apply -f 4-policy/cleanup-virtual-service.yaml
-$ kubectl delete -f 4-policy/fortio.yaml 
-$ kubectl delete -f 4-policy/rate-limiting/global/rate-limit-service.yaml
-$ kubectl delete -f 4-policy/rate-limiting/global/rate-limit-envoy-filter.yaml 
-$ kubectl delete -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml 
+kubectl apply -f 4-policy/cleanup-virtual-service.yaml
+kubectl delete -f 4-policy/fortio.yaml 
+kubectl delete -f 4-policy/rate-limiting/global/rate-limit-service.yaml
+kubectl delete -f 4-policy/rate-limiting/global/rate-limit-envoy-filter.yaml 
+kubectl delete -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml 
 ```
 
 ## 5. Security
+
 ### 1. mutual TLS authentication
 With all of the identity certificates (SVIDs) distributed to workloads across the system, how do we actually use them to verify the identity of the servers with which we’re communicating and perform authentication and authorization? This is where mTLS comes into play.
-mTLS (mutual TLS) is TLS in which both parties, client and server, present certificates to each other. This allows the client to verify the identity of the server, like normal TLS, but it also allows the server to verify the identity of the client attempting to establish the connection. 
+
+mTLS (mutual TLS) is TLS in which both parties, client and server, present certificates to each other. This allows the client to verify the identity of the server, like normal TLS, but it also allows the server to verify the identity of the client attempting to establish the connection.
+
 In this example, we will migrate the existing Istio services traffic from plaintext to mutual TLS without breaking live traffic.
 
-Istio 1.5 brings the concept of PeerAuthentication, which is a CRD that allows us to enable and configure mTLS at both the cluster level and namespace level. First we start by enabling mTLS:
+Istio has a concept of [PeerAuthentication](https://istio.io/latest/docs/reference/config/security/peer_authentication/), which is a policy that allows us to enable and configure mTLS at both the cluster level and namespace level. First we start by enabling mTLS for each of our services:
 ```bash
-$ kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
-$ kubectl apply -f 5-security/mtls/destination-rule-tls.yml  
+kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
+kubectl apply -f 5-security/mtls/destination-rule-tls.yml
 ```
 
-To confirm that plain-text requests fail as TLS is required to talk to any service in the mesh, we redeploy `fortlio` by disabling sidecare injection this time. and run some requests
+To confirm that plain-text requests fail as TLS is required to talk to any service in the mesh, we redeploy `fortlio` by disabling sidecare injection this time using the `sidecar.istio.io/inject: false` annotation. Then we run some tests
 ```bash
-$ kubectl apply -f 5-security/fortio.yaml
-$ FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -curl -k http://catalogue/tags  
+kubectl apply -f 5-security/fortio.yaml
+FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
+kubectl -n sock-shop exec -it $FORTIO_POD  -- /usr/bin/fortio load -curl -k http://catalogue/tags  
 ```
+
 You should notice that fortio fails to make calls to `catalogue` service, and we get a `Connection reset by peer` which is what we expected.
-Now how do we get a successful connection? In order to have applications communicate over mutual TLS, they need to be on-boarded onto the mesh. Or we can disable mTLS for `catalogue` service
+
+Now how do we get a successful connection? In order to have applications communicate over mutual TLS, they need to be on-boarded onto the mesh, in other terms we should enable sidecar injection for each service in the mesh.
+
+Or we can disable mTLS for `catalogue` service for the purpose of this workshop, let's explore this option
 ```bash
-$ kubectl apply -f 5-security/mtls/disable-mtls-catalogue.yaml
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -curl -k http://catalogue/tags  
+kubectl apply -f 5-security/mtls/disable-mtls-catalogue.yaml
+kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -curl -k http://catalogue/tags  
 ```
-You can see that the request was successful! But if you go to our app, you should notice that no catalogues are returned, we should re-enable mtls again in order to work:
+
+You can see that the request was successful! But if you refresh the app, you should notice that no catalogues are returned. This is because we disabled peerAuthentication on the `catalogue` service but all the other services require it. we should re-enable mtls again in order for the app to work:
 ```bash
-$ kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
-$ kubectl apply -f 5-security/mtls/destination-rule-tls.yml  
+kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
+kubectl apply -f 5-security/mtls/destination-rule-tls.yml  
 ```
+
 ### 2. Authorization for HTTP traffic
-Istio’s authorization features provide mesh-, namespace-, and workload-wide access control for your workloads in the mesh. 
+Istio’s authorization features provide mesh, namespace, and workload level access control to the mesh.
+
 We'll start by creating a deny-all policy for the `/catalogue` path in the front-end service
 ```bash
-$ kubectl apply -f 5-security/http-auth/deny-policy.yaml   
+kubectl apply -f 5-security/http-auth/deny-policy.yaml   
 ```
-Point your browser at the app (`http://$$INGRESS_IP/catalogue`). You should see "RBAC: access denied". The error shows that the configured deny-all policy is working as intended.
+Point your browser at the app catalogue page (`http://LoadBalancerIP/catalogue`). You should see "RBAC: access denied". The error shows that the configured deny-all policy is working as intended.
+
 Let's fix this:
 ```bash
-$ kubectl apply -f 5-security/http-auth/allow-policy.yaml   
+kubectl apply -f 5-security/http-auth/allow-policy.yaml   
 ```
-Here we allow only `GET`  http method. If you try to call the link using a `POST` method for example, you should see "RBAC: access denied".
+Here we allow only `GET` http method. Load the app catalogue page (`http://LoadBalancerIP/catalogue`) and you should see a json output. The app is broken because other services depend on the catalogue but we created a policy to only allow the front-end to call it and we broke everything else.
+
 ### 3. JWT
-Another great feature of Istio authorization policy ia ability to enforce access based on a JSON Web Token (JWT). An Istio authorization policy supports both string typed and list-of-string typed JWT claims.
-Let's start by creating a `RequestAuthentication` policy for the `front-end` workload in the `sock-shop` namespace. This policy for front-end workload accepts a JWT issued by `testing@secure.istio.io`. We'll create also a `AuthorizationPolicy` policy that requires all requests to the `front-end` workload to have a valid JWT with requestPrincipal set to `testing@secure.istio.io/testing@secure.istio.io`.
+Another great feature of Istio authorization policy is the ability to enforce access based on a JSON Web Token (JWT). An Istio authorization policy supports both string typed and list-of-string typed JWT claims.
+
+Let's start by creating a `RequestAuthentication` policy for the `front-end` workload in the `sock-shop` namespace. This policy for the front-end workload accepts a JWT issued by `testing@secure.istio.io`. 
+
+We will also create an `AuthorizationPolicy` policy that requires all requests to the `front-end` workload to have a valid JWT with requestPrincipal set to `testing@secure.istio.io/testing@secure.istio.io`.
 ```bash
-$ kubectl apply -f 5-security/jwt/jwt-request-auth.yaml  
+kubectl apply -f 5-security/jwt/jwt-request-auth.yaml  
 ```
 Verify that a request with an invalid JWT is denied:
 ```bash
-kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -curl -H "Authorization: Bearer invalidToken" http://catalogue/tags
+export INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+curl -H "Authorization: Bearer invalidToken" http://$INGRESS_IP
 ```
+
 Verify that a request with a valid JWT is allowed:
 ```bash
-$ TOKEN=$(curl https://raw.githubusercontent.com/aboullaite/service-mesh/master/5-security/jwt/data.jwt -s)
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -curl -H "Authorization: Bearer $TOKEN" http://catalogue/tags
+TOKEN=$(curl https://raw.githubusercontent.com/boredabdel/istio-workshop-gcp/master/5-security/jwt/data.jwt -s)
+curl -H "Authorization: Bearer $TOKEN" http://$INGRESS_IP
 ```
-PS: If you get `connection reset by peer` error, that because of mtls. check (mtls)[(#1-mutual-tls-authentication)] section for details on how to disable mtls for the catalogue service and enable it back after the testing.
+
 ### 4. Clean up
 ```bash
-$ kubectl delete -f 5-security/jwt/jwt-request-auth.yaml
-$ kubectl apply -f 5-security/http-auth/allow-all.yaml
-$ kubectl delete -f 5-security/jwt/jwt-request-auth.yaml 
-$ kubectl apply -f 5-security/fortio.yaml
+kubectl delete -f 5-security/jwt/jwt-request-auth.yaml
+kubectl apply -f 5-security/http-auth/allow-all.yaml
+kubectl delete -f 5-security/jwt/jwt-request-auth.yaml 
+kubectl delete -f 5-security/fortio.yaml
 ## Making sure that mtls is configured for all services
-$ kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
-$ kubectl apply -f 5-security/mtls/destination-rule-tls.yml 
+kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
+kubectl apply -f 5-security/mtls/destination-rule-tls.yml 
 ```
 
 ## 6. Observability
-Insight is the number one reason why people deploy a service mesh. Not only do service meshes provide a level of immediate insight, but they also do so uniformly and ubiquitously. You might be accustomed to having individual monitoring solutions for distributed tracing, logging, security, access control, metering, and so on. Service meshes centralize and assist in consolidating these separate panes of glass by generating metrics, logs, and traces of requests transiting the mesh. 
+Observability is of the many reasons why people use a service mesh like Istio. Not only do service meshes provide a level of immediate insight, but they also do so uniformly and ubiquitously. You might be accustomed to having individual monitoring solutions for distributed tracing, logging, security, access control, metering, and so on. Service meshes centralize and assist in consolidating these separate panes of glass by generating metrics, logs, and traces of requests transiting the mesh. 
 
 To generate some load for our application, we are going to use Fortio to generate and simulates user traffic to Sock Shop:
 ```bash
-$ kubectl apply -f 6-observability/fortio.yaml
+kubectl apply -f 6-observability/fortio.yaml
 ```
 ### 1. Prometheus
-First, let's verify that the [prometheus](https://prometheus.io/) service is running in the cluster:
+First, deploy Prometheus
 ```bash
-$ kubectl apply -f 6-observability/fortio.yaml
-$ INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-$ FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')
-$ while true; do kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 1 -qps 0 -n 10 -loglevel Warning $INGRESS_IP/catalogue; sleep 2s; done;
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/prometheus.yaml
 ```
 
-Now open a new terminal for the rest of this section and leave the above command generating some load for our app.
-You should see that its up and available on port 9090. If not you can quickly install it using `kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/prometheus.yaml`. Let's check it out by configuring port-forwarding:
+You should see that its up and available on port 9090 (using a Service) in the `istio-system` namespace.
 ```bash
-$ kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090:9090 &
+kubectl get pods,services -n istio-system
 ```
-Next, open `localhost:9090` on your browser and let's query for total requests to catalogue service. In the `Expression` input box at the top of the web page, enter the text: `istio_requests_total{destination_service="catalogue.sock-shop.svc.cluster.local"}`. Then, click the Execute button. 
+
+Let's check it out by port-forwarding prometheus port 9090 to the Cloud Shell port 8080:
+```bash
+kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 8080:9090
+```
+
+In the Cloud Shell window, click on the `Web Preview` button on the top-right corner and select `Preview on port 8080`. This should load the Prometheus webpage.
+
+Now open a new Tab in the Cloud Shell for the rest of this section and leave the above command generating some load for our app.
+```bash
+INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')
+while true; do kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 1 -qps 0 -n 10 -loglevel Warning $INGRESS_IP/catalogue; sleep 2s; done;
+```
+
+Next go back to the Prometheus webpage and let's query for the total requests to catalogue service. In the `Expression` input box at the top of the web page, enter the text: `istio_requests_total{destination_service="catalogue.sock-shop.svc.cluster.local"}`. Then, click the Execute button. You should see some metrics
 
 ![Prometheus metrics](assets/prometheus.png)
 
-You can exit port-forwarding mode using `ctrl + c`
 ### 2. Grafana
-[Grafana](https://grafana.com/) is mainly used to visualize the prometheus data. Similarly we verify that the service is running and use port-forwarding to visualize Grafana dashboard:
+[Grafana](https://grafana.com/) is a better tool for visualizing prometheus data.
+
+Let's deploy it and use it to see some graphs:
 ```bash
-$ kubectl -n istio-system get svc grafana
-## If not available install grafana using 
-## `kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/grafana.yaml`
-$ kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 3000:3000 &
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/grafana.yaml
+kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 8080:3000
 ```
-Then open `localhost:3000`, click on `Istio Mesh Dashboard`. This gives the global view of the Mesh along with services and workloads in the mesh. You can get more details about services and workloads by navigating to their specific dashboards.
+
+In the Cloud Shell window, click again on the `Web Preview` button on the top-right corner and select `Preview on port 8080`. This should load the Grafana webpage.
+
+On the left menu select `Dashboards > Manager > Istio > Istio Mesh Dashboard`
 
 ![Istio Dashboard](assets/grafana-istio-dashboard.png)
 
-From the Grafana dashboard’s left hand corner navigation menu, you can navigate to Istio Service Dashboard and select any service. It gives details about metrics for the service and then client workloads (workloads that are calling this service) and service workloads (workloads that are providing this service) for that service.
+Click on any service (Exp: Catalogue) from the list. It should give you details about metrics for the service
+
 ![Catalogue service dashboard](assets/grafana-catalogue-dashboard.png)
 
 ### 3. Tracing

@@ -10,8 +10,6 @@ spec:
       app: fortio
   template:
     metadata:
-      annotations:
-        sidecar.istio.io/inject: "false"
       labels:
         app: fortio
     spec:
