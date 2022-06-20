@@ -17,7 +17,7 @@ spec:
     mirror:
       host: front-end
       subset: v2
-    mirror_percent: 100
+    mirrorPercentage: 100
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule

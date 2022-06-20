@@ -146,7 +146,7 @@ If all pods return a `Running` status, you are good to progress.
 ## 1. Deployment
 At this stage we are ready to deploy
 
-### 0. Prepare your namespace
+#### 0. Prepare your namespace
 
 Before we deploy the app, we need to prepare the namespace where it will be deployed, and label it for automatic sidecar injection. You can read more about this [here](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/) but in a nutshell the label will trigger the Istio control plane to automatically inject the sidecars into each pod in the cluster. So you don't have to do it manually.
 
@@ -154,7 +154,7 @@ Before we deploy the app, we need to prepare the namespace where it will be depl
 kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
 ```
 
-### 1. deploy the app
+#### 1. deploy the app
 ```bash
 kubectl apply -f 1-deploy-app/manifests
 ```
@@ -168,19 +168,19 @@ There should be 14 pods deployed in total. For each of them look at the `Ready` 
 
 Wait until all containers are ready before you progress.
 
-### 2. Configure Istio virtual services & Distination rules
+#### 2. Configure Istio virtual services & Distination rules
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
 ```
 Virtual services and Destination rules are  key part of Istio’s traffic routing functionality. You can think of virtual services as how you route your traffic to a given destination, and then you use destination rules to configure what happens to traffic for that destination.
 
-### 3. Configure the Istio ingress gateway
+#### 3. Configure the Istio ingress gateway
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
 ```
 An Ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration.
 
-### 4. Verifying the config
+#### 4. Verifying the config
 ```bash
 $ istioctl proxy-status
 ```
@@ -192,58 +192,84 @@ echo $(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.s
 ```
 
 Open a new TAB with the IP Address of the LoadBalancer. The app should be up and running along with some socks :)
- 
-### 5. User accounts
 
+#### 5. User accounts
+
+You can use the following username/password to login to the app
 |Username |	Password|
 |---------|:--------|
 |user	  | password|
 |user1	  | password|
 
 ## 2. Traffic Management
-Istio’s traffic routing rules let you easily control the flow of traffic and API calls between services. Istio simplifies configuration of service-level properties like circuit breakers, timeouts, and retries, and makes it easy to set up important tasks like A/B testing, canary rollouts, and staged rollouts with percentage-based traffic splits.
+Istio’s traffic routing rules let you easily control the flow of traffic and API calls between services. Istio simplifies configuration of service-level properties like circuit breakers, timeouts, and retries, and makes it easy to set up important tasks like A/B testing, canary rollouts, and staged rollouts with percentage-based traffic splits. In this section we will explore some of these capabilities.
 
 We start by rolling a new Deployment of `v2` version of the front-end service
 ```bash
-$ kubectl apply -f 2-traffic-management/front-end-dep-v2.yaml
+kubectl apply -f 2-traffic-management/front-end-dep-v2.yaml
 ```
-now we have 2 versions of the front-end app running side by side. However if you hit the browser you'll see only the `v1` (blue)
+
+Check that v2 of the frontend have been deployed
+```bash
+kubectl get pods
+```
+
+There should be a pod called front-end-v2-xxxxxxxxx (xxxxxx is a random string added by k8s) running
+
+Now we have 2 versions of the front-end app running side by side. However if you hit the browser you'll see only the `v1` (blue colored)
 
 #### 1. Blue/Green Deployment
 Blue-green deployment is a technique that reduces downtime and risk by running two identical production environments called Blue and Green.
-Now let's switch to `v2` (red) as live environment serving all production traffic. 
+Now let's switch to `v2` (red colored) in the live environment serving all production traffic. 
 ```bash
-$ kubectl apply -f 2-traffic-management/blue-green/frontv2-virtual-service.yaml
+kubectl apply -f 2-traffic-management/blue-green/frontv2-virtual-service.yaml
 ```
-Now if you check the app, you'll see only the `v2` (red version) of our application. Same way, you can rollback at any moment to the old version
+Now if you check the app, you'll see only the `v2` (red colored version) of our application. Same way, you can rollback at any moment to the old version
 ```bash
-$ kubectl apply -f 2-traffic-management/blue-green/frontv1-virtual-service.yaml
+kubectl apply -f 2-traffic-management/blue-green/frontv1-virtual-service.yaml
 ```
+
+Refresh the app and check that the blue colord versioned is live.
+
 #### 2. Canary deployment
-Istio’s routing rules provides important advantages; you can easily control fine-grained traffic percentages (e.g., route 10% of traffic without requiring 100 pods) and you can control traffic using other criteria (e.g., route traffic for specific users to the canary version). To illustrate, let’s look at deploying the `front-end` service and see how simple to achieve canary deployment using istio.
+Istio’s routing rules provides important advantages; you can easily control fine-grained traffic percentages (e.g., route 10% of traffic to the new version of my app).
+
+You can also control traffic using other criteria (e.g., route traffic for specific users to the canary version). To illustrate, let’s look at doing a canary traffic splitting for the `front-end` service.
 
 For that, we need to set a routing rule to control the traffic distribution by sending 20% of the traffic to the canary (`v2`). execute the following command
 ```bash
-$ kubectl apply -f 2-traffic-management/canary/canary-virtual-service.yaml 
+kubectl apply -f 2-traffic-management/canary/canary-virtual-service.yaml 
 ```
-and refresh the page a couple of times. The majority of pages return `v1` (blue), with some `v2` (red) from time to time.
+and refresh the page a couple of times. The majority of pages return `v1` (blue colored), with some `v2` (red colored) from time to time.
+
 #### 3. Route based on some criteria
-With istio, we can easily route requests when they met some desired criteria. 
-For now we have `v1` and `v2` deployed in our clusters, we can forward all forward all users using `Firefox` to `v2`, and serve `v1` to all other clients:
+With istio, we can easily route requests when they meet some criteria. 
+For now we have `v1` and `v2` of the `front-end` service deployed in our clusters, we can forward all users using `Firefox` as a browser to `v2`, and serve `v1` to all other clients:
 ```bash
-$ kubectl apply -f 2-traffic-management/route-headers/frontv2-virtual-service-firefox.yaml
+kubectl apply -f 2-traffic-management/route-headers/frontv2-virtual-service-firefox.yaml
 ```
+
+If you open the same URL in `Firefox` you should see the red colored version. Using an other browser you will see the blue one.
+
 #### 4. Mirroring
-Traffic mirroring (also called shadowing), is a powerful concept that allows feature teams to bring changes to production with as little risk as possible. Mirroring sends a copy of live traffic to a mirrored service. You can then send the traffic to out-of-band of the critical request path for the primary service (Content inspection, Threat monitoring, Troubleshooting)
+Traffic mirroring (also called shadowing), is a powerful concept that allows feature teams to bring changes to production with as little risk as possible. Mirroring sends a copy of live traffic to a mirrored service. You can then send the traffic to out-of-band of the critical request path for the primary service (to perform Content inspection, Threat monitoring, Troubleshooting, etc...)
 
 ```bash
-$ kubectl apply -f 2-traffic-management/mirorring/mirror-v2.yaml 
+kubectl apply -f 2-traffic-management/mirorring/mirror-v2-virtual-service.yaml
 ```
 This new rule sends 100% of the traffic to `v1` while mirroring the same traffic to `v2`. you can check the logs of v1 and `v2` pods to verify that logs created in `v2` are the mirrored requests that are actually going to `v1`.
+
+Run the following command
+```bash
+kubectl logs -n sock-shop -l name=front-end,version=v2 -f
+```
+
+And open the app and try to navigate to some parts of the menu few times (Exp: Catalogue > Size > Large) and check the logs of the pods for the `v2` app.
+
 #### 5. Clean up
 ```bash
-$ kubectl apply -f 2-traffic-management/cleanup-virtual-service.yaml
-$ kubectl delete -f 2-traffic-management/front-end-dep-v2.yaml  
+kubectl apply -f 2-traffic-management/cleanup-virtual-service.yaml
+kubectl delete -f 2-traffic-management/front-end-dep-v2.yaml  
 ```
 
 ## 3. Resiliency
