@@ -130,9 +130,9 @@ istioctl version
 
 If you get a valid output (the istio version), you are good to progress.
 
-- Now we are ready to deploy Istio to the cluster. We will use the [demo profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for this workshop
+- Now we are ready to deploy Istio to the cluster. We will use the [default profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for this workshop
 ```bash
-istioctl install --set profile=demo -y
+istioctl install --set profile=default -y
 ```
 
 Wait for the command to finish and check istio have been deployed by checking the `istio-system` namespace(istio-system is the default namespace where the Istio control plane components are deployed).
@@ -154,7 +154,7 @@ Before we deploy the app, we need to prepare the namespace where it will be depl
 kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
 ```
 
-### 1. deploy app
+### 1. deploy the app
 ```bash
 kubectl apply -f 1-deploy-app/manifests
 ```
@@ -170,34 +170,29 @@ Wait until all containers are ready before you progress.
 
 ### 2. Configure Istio virtual services & Distination rules
 ```bash
-$ kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
+kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
 ```
 Virtual services and Destination rules are  key part of Istio’s traffic routing functionality. You can think of virtual services as how you route your traffic to a given destination, and then you use destination rules to configure what happens to traffic for that destination.
 
-### 3. Configure Istio ingress gateway
+### 3. Configure the Istio ingress gateway
 ```bash
-$ kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
+kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
 ```
 An Ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration.
 
-### 4. Verifying our config
+### 4. Verifying the config
 ```bash
 $ istioctl proxy-status
 ```
 Using the `istioctl proxy-status` command allows us to get an overview of our mesh. If you suspect one of your sidecars isn’t receiving configuration or is not synchronized, proxy-status will let you know. 
 
-If everything is fine, run the below command to open sock-shop app in your browser
+If everything is fine, run the below command to get the LoadBalancer IP:Port
 ```bash
-$ open "http://$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')"
+echo $(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')
 ```
 
-Note: If you are using `minikube`, remember to run 
-```bash 
-minikube tunnel
-```
-This will ensure you can open the url above in your browser.
-
-If everything is fine you should see the app up and running along with some socks :) 
+Open a new TAB with the IP Address of the LoadBalancer. The app should be up and running along with some socks :)
+ 
 ### 5. User accounts
 
 |Username |	Password|
