@@ -273,76 +273,84 @@ kubectl delete -f 2-traffic-management/front-end-dep-v2.yaml
 ```
 
 ## 3. Resiliency
+
 ### 1. Fault injection
 Fault injection is an incredibly powerful way to test and build reliable distributed applications.
 Istio allows you to configure faults for HTTP traffic, injecting arbitrary delays or returning specific response codes (e.g., 500) for some percentage of traffic.
+
 #### Delay fault
-In this example. we gonna inject five seconds delay for all traffic calling the `catalogue` service. This is a great way to reliably test how our app behaves on a bad network.
+In this example. we will inject five seconds delay for all traffic calling the `catalogue` service. This is a great way to reliably test how our app behaves when the network connectivity is unreliable.
 ```bash
-$ kubectl apply -f 3-resiliency/fault-injection/delay-fault-injection-virtual-service.yaml
+kubectl apply -f 3-resiliency/fault-injection/delay-fault-injection-virtual-service.yaml
 ```
 Open the application and you can see that it takes now longer to render catalogs
-#### Abort fault
-Replying to clients with specific response codes, like a 429 or a 500, is also great for testing. For example, it can be challenging to programmatically test how your application behaves when a third-party service that it depends on begins to fail. Using Istio, you can write a set of reliable end-to-end tests of your application’s behavior in the presence of failures of its dependencies.
 
-For example, we can simulate 10% of requests to `catalogue` service is failing at runtime with a 500 response code.
+#### Abort fault
+Replying to clients with specific response codes, like a 429 or a 500, is also great for testing. For example, it can be challenging to programmatically test how your application behaves when a third-party service that you depend on begins to fail. Using Istio, you can write a set of reliable end-to-end tests of your application’s behavior in case one of its dependencies is unreliable.
+
+For example, we can simulate 30% of requests to `catalogue` service is failing at runtime with a 500 response code.
 ```bash
-$ kubectl apply -f 3-resiliency/fault-injection/abort-fault-injection-virtual-service.yaml 
-$ open "http://$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name=="http2")].port}')/catalogue"
+kubectl apply -f 3-resiliency/fault-injection/abort-fault-injection-virtual-service.yaml 
 ```
+
 Refresh the page a couple of times. You'll notice that sometimes it doesn't return the json list of catalogs
 
-### 2. Load-Balancing Strategy
-Client-side load balancing is an incredibly valuable tool for building resilient systems. By allowing clients to communicate directly with servers without going through reverse proxies, we remove points of failure while still keeping a well-behaved system.
-By default, Istio uses a round-robin load balancing policy, where each service instance in the instance pool gets a request in turn. Istio supports other options that you can check [here](https://istio.io/docs/concepts/traffic-management/#load-balancing-options)
+### 2. Circuit Breaking
+Circuit breaking is a pattern of protecting calls (e.g., network calls to a remote service) behind a `circuit breaker`. If the protected call returns too many errors, we `trip` the circuit breaker and return errors to the caller without executing the protected call. This was we don't DDOS the remote service and block the caller. 
 
-More complex load-balancing strategies such as consistent hash-based load balancing are also supported. In this example we set up sticky sessions for `catalogue` based on source IP address as the hash key.
-```bash
-$ kubectl apply -f 3-resiliency/load-balancing/load-balancing-consistent-hash.yaml
-```
-### 3. Circuit Breaking
-Circuit breaking is a pattern of protecting calls (e.g., network calls to a remote service) behind a `circuit breaker`. If the protected call returns too many errors, we `trip` the circuit breaker and return errors to the caller without executing the protected call. 
+For example, we can configure circuit breaking rules for the `catalogue` service and test the configuration by intentionally `tripping` the circuit breaker. To achieve this, we will use a load-testing client called [fortio](https://github.com/fortio/fortio). Fortio lets us control the number of connections, concurrency, and delays for outgoing HTTP calls.
 
-For example, we can configure circuit breaking rules for `catalogue` service and test the configuration by intentionally `tripping` the circuit breaker. To achieve this, we gonna use a simple load-testing client called [fortio](https://github.com/fortio/fortio). Fortio lets us control the number of connections, concurrency, and delays for outgoing HTTP calls. 
 ```bash
-$ kubectl apply -f 3-resiliency/circuit-breaking/circuit-breaking.yaml 
-$ kubectl apply -f 3-resiliency/circuit-breaking/fortio.yaml 
-$ FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
-$ kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 4 -qps 0 -n 40 -loglevel Warning http://catalogue/tags
+kubectl apply -f 3-resiliency/circuit-breaking/circuit-breaking.yaml 
+kubectl apply -f 3-resiliency/circuit-breaking/fortio.yaml 
+FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
+kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 4 -qps 0 -n 40 -loglevel Warning http://catalogue/tags
 ```
+
 In the `DestinationRule` settings, we specified `maxConnections: 1` and `http1MaxPendingRequests: 1`. They indicate that if we exceed more than one connection and request concurrently, you should see some failures when the istio-proxy opens the circuit for further requests and connections. 
-While testing, should expect something similar to this output:
+
+While testing, you should get something similar to this output:
+
 ```
 Sockets used: 28 (for perfect keepalive, would be 4)
 Code 200 : 14 (35.0 %)
 Code 503 : 26 (65.0 %)
 ```
+
+This is because we run fortio with 4 concurrent requests (`-c 4`) and 40 calls per request (`-n 40`). The circuit was tripped.
+
 ### 4. Retries
-Every system has transient failures: network buffers overflow, a server shutting down drops a request, a downstream system fails, and so on.
+Every system has transient failures: network buffers overflow, a server shutting down drops requests, a downstream system fails, and so on.
 
-Istio gives you the ability to configure retries globally for all services in your mesh. More significant, it allows you to control those retry strategies at runtime via configuration, so you can change client behavior on the fly.
+Istio gives you the ability to configure retries globally for all services in your mesh. More significantally, it allows you to control those retry strategies at runtime via configuration, so you can change client behavior on the fly.
 
-The following example configures a maximum of 3 retries to connect to `catalogue` service subset after an initial call failure, each with a 1s timeout.
+The following example configures a maximum of 3 retries to connect to the `catalogue` service subset after an initial call failure, each with a 1s timeout.
 ```bash
-$ kubectl apply -f 3-resiliency/retry/retry-virtual-service.yaml
+kubectl apply -f 3-resiliency/retry/retry-virtual-service.yaml
 ```
-Worth noting that retry policy defined in a `VirtualService` works in concert with the connection pool settings defined in the destination’s `DestinationRule` to control the total number of concurrent outstanding retries to the destination.
+
+Refresh the page a few times to check.
+
 ### 5. Timeouts
-Timeouts are important for building systems with consistent behavior. By attaching deadlines to requests, we’re able to abandon requests taking too long and free server resources.
+Timeouts are important for building systems with consistent behavior. By attaching deadlines to requests, we are able to abandon requests taking too long and free server resources.
 
 Here we configure a virtual service that specifies a 5 second timeout for calls to the `v1` subset of the `catalogue` service:
 ```bash
-$ kubectl apply -f 3-resiliency/timeout/timeout-virtual-service.yaml
+kubectl apply -f 3-resiliency/timeout/timeout-virtual-service.yaml
 ```
 
 We combined in the example the use of retry and timeout. The timeout represents then the total time that the client will spend waiting for a server to return a result.
+
+Refresh the page a few times to check.
+
 ### 5. Clean up
 ```bash
-$ kubectl apply -f 3-resiliency/cleanup-virtual-service.yaml
-$ kubectl delete -f 3-resiliency/circuit-breaking/fortio.yaml 
+kubectl apply -f 3-resiliency/cleanup-virtual-service.yaml
+kubectl delete -f 3-resiliency/circuit-breaking/fortio.yaml 
 ```
 
 ## 4. Policy
+
 ### 1. Rate limiting
 Rate limiting is generally put in place as a defensive measure for services. Shared services need to protect themselves from excessive use (whether intended or unintended) to maintain service availability.
 #### Global rate limiting
