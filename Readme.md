@@ -554,7 +554,7 @@ kubectl apply -f 6-observability/fortio.yaml
 ### 1. Prometheus
 First, deploy Prometheus
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/prometheus.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/prometheus.yaml
 ```
 
 You should see that its up and available on port 9090 (using a Service) in the `istio-system` namespace.
@@ -585,7 +585,7 @@ Next go back to the Prometheus webpage and let's query for the total requests to
 
 Let's deploy it and use it to see some graphs:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/grafana.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/grafana.yaml
 kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 8080:3000
 ```
 
@@ -602,32 +602,38 @@ Click on any service (Exp: Catalogue) from the list. It should give you details 
 ### 3. Tracing
 Tracing allows you to granularly track request segments (spans) as the request is processed across various services. It’s difficult to introduce later, as (among other reasons) third-party libraries used by the application also need to be instrumented.
 
-Istio-enabled applications can be configured to collect trace spans using, for instance, the popular [Jaeger](https://www.jaegertracing.io/) distributed tracing system. Distributed tracing lets you see the flow of requests a user makes through your system, and Istio's model allows this regardless of what language/framework/platform you use to build your application.
+Istio-enabled applications can be configured to collect trace spans using, for instance, the popular [Jaeger](https://www.jaegertracing.io/) distributed tracing system. Distributed tracing lets you see the flow of requests a user makes is through your system, and Istio's model allows this regardless of what language/framework/platform you use to build your application. Traces are collected at the sidecar level.
 
-Again, we follow the same steps of veriying and configure port-forwarding using:
+Let's see how that works in practice. We need to install Jaeger and port-forward it to our browswer.
 ```bash
-$ kubectl -n istio-system get svc tracing
-### Run this to install if not available
-### kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/jaeger.yaml
-$ kubectl port-forward -n istio-system $(kubectl get pod -n istio-system -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 16686:16686 &
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/jaeger.yaml
+kubectl port-forward -n istio-system $(kubectl get pod -n istio-system -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 8080:16686
 ```
+
+In the Cloud Shell window, click again on the `Web Preview` button on the top-right corner and select `Preview on port 8080`. This should load the Jaeger webpage.
+
 From the left-hand pane of the dashboard, select any service from the Service drop-down list and click Find Traces:
 
 ![Jaeger](assets/jaeger.png)
 
-Click on any trace to see details. The trace is comprised of a set of spans, where each span corresponds to a  service, invoked during the execution of a request
+Click on any trace to see details. The trace is composed of a set of spans, where each span corresponds to a service invoked during the execution of a request.
 
 ![Jaeger Traces](assets/jaeger-traces.png)
 
 ### 4. Kiali
-First step, is to verify Kiali is running and port-forward to access kiali:
+What if we want to see services dependencies in our Mesh and understand which service is calling which and how much traffic is sent between them ?.
+
+For that we can Kiali which is a visual Graph that allows use to see dependencies, traffic information, etc...
+
+So let's deploy Kiali and port-forward it
 ```bash
-$ kubectl -n istio-system get svc kiali
-### Run this to install if not available
-### kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/kiali.yaml
-$ kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=kiali -o jsonpath='{.items[0].metadata.name}') 20001:20001
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/kiali.yaml
+kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=kiali -o jsonpath='{.items[0].metadata.name}') 8080:20001
 ```
-Open kiali dashboard an login using `admin` as the username and password. you should the Overview page immediately after you log in. To view a namespace graph, click on the `sock-shop` graph icon in the Sock-Shop namespace card.
+
+In the Cloud Shell window, click again on the `Web Preview` button on the top-right corner and select `Preview on port 8080`. This should load the Kiali webpage.
+
+Click on `Graph` on the left menu and select `sock-shop` from the namespace drop-down menu.
 
 ![Kiali graph](assets/kiali.png)
 
@@ -638,7 +644,11 @@ To examine the details about the Istio configuration, click on the Applications,
 
 ### 4. Clean up
 ```bash
-$ kubectl delete -f 6-observability/fortio.yaml
+kubectl delete -f 6-observability/fortio.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/prometheus.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/grafana.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/kiali.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/jaeger.yaml
 ```
 
 --- 
