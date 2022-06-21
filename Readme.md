@@ -418,7 +418,9 @@ kubectl delete -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml
 ## 5. Security
 
 ### 1. Mutual TLS authentication
-With all of the identity certificates (SVIDs) distributed to workloads across the system, how do we actually use them to verify the identity of the servers with which we’re communicating and perform authentication and authorization? This is where mTLS comes into play.
+The Istio control plane `istiod` distribute certificates to each workload in the mesh via the sidecar. This is one of the key features of Istio. These certificates are called identity certificates (SVIDs) and they allow to uniquely identify and authenticate each pod. 
+
+How do we actually use them to verify the identity of the servers with which we’re communicating and perform authentication and authorization? This is where mTLS comes into play.
 
 mTLS (mutual TLS) is TLS in which both parties, client and server, present certificates to each other. This allows the client to verify the identity of the server, like normal TLS, but it also allows the server to verify the identity of the client attempting to establish the connection.
 
@@ -430,7 +432,7 @@ kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
 kubectl apply -f 5-security/mtls/destination-rule-tls.yml
 ```
 
-To confirm that plain-text requests fail as TLS is required to talk to any service in the mesh, we redeploy `fortlio` by disabling sidecare injection this time using the `sidecar.istio.io/inject: false` annotation. Then we run some tests
+To confirm that plain-text requests fail as mTLS is required to talk to any service in the mesh, we redeploy `fortlio` by disabling the sidecar injection this time using the `sidecar.istio.io/inject: false` annotation. Then we run some tests
 ```bash
 kubectl apply -f 5-security/fortio.yaml
 FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
@@ -441,35 +443,38 @@ You should notice that fortio fails to make calls to `catalogue` service, and we
 
 Now how do we get a successful connection? In order to have applications communicate over mutual TLS, they need to be on-boarded onto the mesh, in other terms we should enable sidecar injection for each service in the mesh.
 
-Or we can disable mTLS for `catalogue` service for the purpose of this workshop, let's explore this option
+Or we can also disable mTLS for the `catalogue` service for the purpose of testing, this is not something we recommand for production workloads but let's explore this option.
 ```bash
 kubectl apply -f 5-security/mtls/disable-mtls-catalogue.yaml
 kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -curl -k http://catalogue/tags  
 ```
 
-You can see that the request was successful! But if you refresh the app, you should notice that no catalogues are returned. This is because we disabled peerAuthentication on the `catalogue` service but all the other services require it. we should re-enable mtls again in order for the app to work:
+You can see that the request was successful! But if you refresh the app, you should notice that no catalogue is returned. This is because we disabled peerAuthentication on the `catalogue` service but all the other services require it. we should re-enable mtls again in order for the app to work:
 ```bash
 kubectl apply -f 5-security/mtls/peer-auth-mtls.yaml
 kubectl apply -f 5-security/mtls/destination-rule-tls.yml  
 ```
 
 ### 2. Authorization for HTTP traffic
-Istio’s authorization features provide mesh, namespace, and workload level access control to the mesh.
+Istio’s authorization policies provides mesh, namespace, and workload level access control to the mesh.
 
 We'll start by creating a deny-all policy for the `/catalogue` path in the front-end service
 ```bash
 kubectl apply -f 5-security/http-auth/deny-policy.yaml   
 ```
-Point your browser at the app catalogue page (`http://LoadBalancerIP/catalogue`). You should see "RBAC: access denied". The error shows that the configured deny-all policy is working as intended.
+
+Point your browser at the app catalogue page (`http://LoadBalancerIP/catalogue`). You should see `RBAC: access denied`. The error shows that the configured deny-all policy is working as intended.
 
 Let's fix this:
 ```bash
 kubectl apply -f 5-security/http-auth/allow-policy.yaml   
 ```
-Here we allow only `GET` http method. Load the app catalogue page (`http://LoadBalancerIP/catalogue`) and you should see a json output. The app is broken because other services depend on the catalogue but we created a policy to only allow the front-end to call it and we broke everything else.
+Here we allow only `GET` http method from the `front-end` service to the `catalogue` one. Load the app catalogue page (`http://LoadBalancerIP/catalogue`) and you should see a json output.
+
+The app remains broken because other services depend on the `catalogue` but we created a policy to only allow the front-end to call it and we broke everything else.
 
 ### 3. JWT
-Another great feature of Istio authorization policy is the ability to enforce access based on a JSON Web Token (JWT). An Istio authorization policy supports both string typed and list-of-string typed JWT claims.
+Another great feature of Istio authorization policy is the ability to enforce access based on a JSON Web Token (JWT). An Istio `AuthorizationPolicy` supports both string typed and list-of-string typed JWT claims.
 
 Let's start by creating a `RequestAuthentication` policy for the `front-end` workload in the `sock-shop` namespace. This policy for the front-end workload accepts a JWT issued by `testing@secure.istio.io`. 
 
@@ -477,6 +482,7 @@ We will also create an `AuthorizationPolicy` policy that requires all requests t
 ```bash
 kubectl apply -f 5-security/jwt/jwt-request-auth.yaml  
 ```
+
 Verify that a request with an invalid JWT is denied:
 ```bash
 export INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -485,7 +491,7 @@ curl -H "Authorization: Bearer invalidToken" http://$INGRESS_IP
 
 Verify that a request with a valid JWT is allowed:
 ```bash
-TOKEN=$(curl https://raw.githubusercontent.com/boredabdel/istio-workshop-gcp/master/5-security/jwt/data.jwt -s)
+TOKEN=$(curl https://raw.githubusercontent.com/boredabdel/istio-workshop-gcp/main/5-security/jwt/data.jwt -s)
 curl -H "Authorization: Bearer $TOKEN" http://$INGRESS_IP
 ```
 
@@ -501,9 +507,9 @@ kubectl apply -f 5-security/mtls/destination-rule-tls.yml
 ```
 
 ## 6. Observability
-Observability is of the many reasons why people use a service mesh like Istio. Not only do service meshes provide a level of immediate insight, but they also do so uniformly and ubiquitously. You might be accustomed to having individual monitoring solutions for distributed tracing, logging, security, access control, metering, and so on. Service meshes centralize and assist in consolidating these separate panes of glass by generating metrics, logs, and traces of requests transiting the mesh. 
+Observability is of the many reasons why people use a Service Mesh like Istio. Not only do service meshes provide a level of immediate insight, but they also do so uniformly and ubiquitously. You might be accustomed to having individual monitoring solutions for distributed tracing, logging, security, access control, metering, and so on. Service meshes centralize and assist in consolidating these separate panes of glass by generating metrics, logs, and traces of requests transiting the mesh. 
 
-To generate some load for our application, we are going to use Fortio to generate and simulates user traffic to Sock Shop:
+To generate some load for our application, we are going to use Fortio to generate and simulates user traffic to the Sock Shop:
 ```bash
 kubectl apply -f 6-observability/fortio.yaml
 ```
@@ -513,7 +519,7 @@ First, deploy Prometheus
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/prometheus.yaml
 ```
 
-You should see that its up and available on port 9090 (using a Service) in the `istio-system` namespace.
+You should see that its up and available on port 9090 (using a Service) in the `istio-system` namespace. It could take few minutes for the pod to be `Running`
 ```bash
 kubectl get pods,services -n istio-system
 ```
@@ -532,28 +538,25 @@ FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')
 while true; do kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 1 -qps 0 -n 10 -loglevel Warning $INGRESS_IP/catalogue; sleep 2s; done;
 ```
 
-Next go back to the Prometheus webpage and let's query for the total requests to catalogue service. In the `Expression` input box at the top of the web page, enter the text: `istio_requests_total{destination_service="catalogue.sock-shop.svc.cluster.local"}`. Then, click the Execute button. You should see some metrics
+Next go back to the Prometheus webpage and let's query for the total requests to catalogue service. In the `Expression` input box at the top of the web page, enter the text: `istio_requests_total{destination_service="catalogue.sock-shop.svc.cluster.local"}`. Then, click the Execute button. You should see some metrics.
 
 ![Prometheus metrics](assets/prometheus.png)
 
 ### 2. Grafana
 [Grafana](https://grafana.com/) is a better tool for visualizing prometheus data.
 
-Let's deploy it and use it to see some graphs:
+Let's deploy it and use port-forward to see look at some graphs:
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/grafana.yaml
+###Wait few minutes until the Grafana pod is Running
 kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 8080:3000
 ```
 
 In the Cloud Shell window, click again on the `Web Preview` button on the top-right corner and select `Preview on port 8080`. This should load the Grafana webpage.
 
-On the left menu select `Dashboards > Manager > Istio > Istio Mesh Dashboard`
+On the left menu select `Dashboards > Browse > Istio > Istio Mesh Dashboard`
 
 ![Istio Dashboard](assets/grafana-istio-dashboard.png)
-
-Click on any service (Exp: Catalogue) from the list. It should give you details about metrics for the service
-
-![Catalogue service dashboard](assets/grafana-catalogue-dashboard.png)
 
 ### 3. Tracing
 Tracing allows you to granularly track request segments (spans) as the request is processed across various services. It’s difficult to introduce later, as (among other reasons) third-party libraries used by the application also need to be instrumented.
@@ -563,16 +566,17 @@ Istio-enabled applications can be configured to collect trace spans using, for i
 Let's see how that works in practice. We need to install Jaeger and port-forward it to our browswer.
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/jaeger.yaml
+###Wait few minutes until the Jaeger pod is Running
 kubectl port-forward -n istio-system $(kubectl get pod -n istio-system -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 8080:16686
 ```
 
 In the Cloud Shell window, click again on the `Web Preview` button on the top-right corner and select `Preview on port 8080`. This should load the Jaeger webpage.
 
-From the left-hand pane of the dashboard, select any service from the Service drop-down list and click Find Traces:
+From the left-hand pane of the dashboard, select any service from the Service drop-down list and click `Find Traces`:
 
 ![Jaeger](assets/jaeger.png)
 
-Click on any trace to see details. The trace is composed of a set of spans, where each span corresponds to a service invoked during the execution of a request.
+Click on any trace to see details. The trace is composed of a set of spans, where each span corresponds to the services invoked during the execution of a request.
 
 ![Jaeger Traces](assets/jaeger-traces.png)
 
@@ -584,6 +588,7 @@ For that we can Kiali which is a visual Graph that allows use to see dependencie
 So let's deploy Kiali and port-forward it
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/kiali.yaml
+###Wait few minutes until the Kiali pod is Running
 kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=kiali -o jsonpath='{.items[0].metadata.name}') 8080:20001
 ```
 
