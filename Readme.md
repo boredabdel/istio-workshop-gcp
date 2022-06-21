@@ -214,17 +214,17 @@ You can use the following username/password to login to the app
 ## 2. Traffic Management
 Istio’s traffic routing rules let you easily control the flow of traffic and API calls between services. Istio simplifies configuration of service-level properties like circuit breakers, timeouts, and retries, and makes it easy to set up important tasks like A/B testing, canary rollouts, and staged rollouts with percentage-based traffic splits. In this section we will explore some of these capabilities.
 
-We start by rolling a new Deployment of `v2` version of the front-end service
+We start by rolling a new Deployment of `v2` version of the front-end service.
 ```bash
 kubectl apply -f 2-traffic-management/front-end-dep-v2.yaml
 ```
 
-Check that v2 of the frontend have been deployed
+Check that v2 of the frontend have been deployed.
 ```bash
-kubectl get pods
+kubectl get pods -n sock-shop
 ```
 
-There should be a pod called front-end-v2-xxxxxxxxx (xxxxxx is a random string added by k8s) running
+There should be a pod running called front-end-v2-xxxxxxxxx (xxxxxx is a random string added by k8s).
 
 Now we have 2 versions of the front-end app running side by side. However if you hit the browser you'll see only the `v1` (blue colored)
 
@@ -234,7 +234,7 @@ Now let's switch to `v2` (red colored) in the live environment serving all produ
 ```bash
 kubectl apply -f 2-traffic-management/blue-green/frontv2-virtual-service.yaml
 ```
-Now if you check the app, you'll see only the `v2` (red colored version) of our application. Same way, you can rollback at any moment to the old version
+Now if you refresh and check the app, you'll see only the `v2` (red colored version) of our application. Same way, you can rollback at any moment to the old version
 ```bash
 kubectl apply -f 2-traffic-management/blue-green/frontv1-virtual-service.yaml
 ```
@@ -250,10 +250,10 @@ For that, we need to set a routing rule to control the traffic distribution by s
 ```bash
 kubectl apply -f 2-traffic-management/canary/canary-virtual-service.yaml 
 ```
-and refresh the page a couple of times. The majority of pages return `v1` (blue colored), with some `v2` (red colored) from time to time.
+and refresh the page a couple of times. The majority of pages return `v1` (blue colored), with some `v2` (red colored) from time to time. You can play with the `weight` values to increase the canary percentage for v2 and decrease it for v1. 
 
 ### 3. Route based on some criteria
-With istio, we can easily route requests when they meet some criteria. 
+With istio, we can easily route requests when they meet certain criteria. 
 For now we have `v1` and `v2` of the `front-end` service deployed in our clusters, we can forward all users using `Firefox` as a browser to `v2`, and serve `v1` to all other clients:
 ```bash
 kubectl apply -f 2-traffic-management/route-headers/frontv2-virtual-service-firefox.yaml
