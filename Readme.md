@@ -363,7 +363,7 @@ kubectl delete -f 3-resiliency/circuit-breaking/fortio.yaml
 ## 4. Policy
 
 ### 1. Rate limiting
-Rate limiting is generally put in place as a defensive measure for services. Shared services need to protect themselves from excessive use (whether intended or unintended) to maintain service availability.
+Rate limiting is generally put in place as a defense measure for services. Shared services need to protect themselves from excessive use (whether intended or unintended) to maintain service availability.
 
 #### Global rate limiting
 There is no native support yet for rate limiting in the Istio API. Thus, we will be using the [Envoy rate limit service](https://github.com/envoyproxy/ratelimit), which is is a Go/gRPC service designed to enable generic rate limit scenarios from different types of applications.
