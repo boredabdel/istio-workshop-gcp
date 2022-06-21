@@ -279,7 +279,7 @@ And open the app and try to navigate to some parts of the menu few times (Exp: C
 ### 5. Clean up
 ```bash
 kubectl apply -f 2-traffic-management/cleanup-virtual-service.yaml
-kubectl delete -f 2-traffic-management/front-end-dep-v2.yaml  
+kubectl delete -f 2-traffic-management/front-end-dep-v2.yaml
 ```
 
 ## 3. Resiliency
