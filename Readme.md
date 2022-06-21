@@ -10,7 +10,7 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 ![Sock Shop app](assets/sock-shop.png)
 
 # Content
-- [0. Prepare the environment & Install istio](#0-install-istio)
+- [0. Prepare the environment & Install istio](#0-prepare-the-environment-and-install-istio)
 - [1. App Deployment](#1-app-deployment)
     - [0. Prepare your namespace](#0-prepare-your-namespace)
     - [Deploy the app](#1-deploy-the-app)
@@ -44,7 +44,7 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
     - [3. Tracing](#3-tracing)
     - [4. Kiali](#4-kiali)
 
-## 0. Install istio
+## 0. Prepare the environment and Install istio
 At the begining of this workshop, you should have been given credentials for a Google Cloud Platform(GCP) project to use. 
 
 Follow the instructions below to provision a Google Kubernetes Cluster(GKE), deploy Istio and verify the environment is ready to start the workshop.
@@ -365,77 +365,26 @@ kubectl delete -f 3-resiliency/circuit-breaking/fortio.yaml
 ### 1. Rate limiting
 Rate limiting is generally put in place as a defense measure for services. Shared services need to protect themselves from excessive use (whether intended or unintended) to maintain service availability.
 
-#### Global rate limiting
-There is no native support yet for rate limiting in the Istio API. Thus, we will be using the [Envoy rate limit service](https://github.com/envoyproxy/ratelimit), which is is a Go/gRPC service designed to enable generic rate limit scenarios from different types of applications.
-To mimic a real world example, we suppose that we have 2 plans: 
-+ Basic: 5 requests pe minute
-+ Plus: 20 requests per minute
-
-We configure Envoy rate limiting actions to look for `x-plan` and `x-account` in request headers. We also configure the descriptor match any request with the account and plan keys, such that (`'account', '<unique value>')`, `('plan', 'BASIC | PLUS')`. The `account` key doesn't specify any value, it uses each unique value passed into the rate limiting service to match. The `plan` descriptor key has two values specified and depending on which one matches (BASIC or PLUS) determines the rate limit, either 5 request per minute for `BASIC` or 20 requests per minute for `PLUS`.
-```bash
-kubectl apply -f 4-policy/rate-limiting/global/rate-limit-service.yaml
-kubectl apply -f 4-policy/rate-limiting/global/rate-limit-envoy-filter.yaml 
-``` 
-
-We will use Fortio again to test the above scenarios and prove that the rate limiting works.
-```bash
-#### DEPLOY FORTIO
-kubectl apply -f 4-policy/fortio.yaml 
-export INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
-####  BASIC PLAN
-kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 1 -qps 0 -n 2 -loglevel Warning -H "x-plan: BASIC" -H "x-account: user" $INGRESS_IP/catalogue
-...
-Sockets used: 5 (for perfect keepalive, would be 1)
-Code 200 : 1 (50.0 %)
-Code 429 : 1 (50.0 %)
-### PLUS PLAN
-kubectl -n sock-shop exec -it $FORTIO_POD  -c fortio /usr/bin/fortio -- load -c 1 -qps 0 -n 4 -loglevel Warning -H "x-plan: PLUS" -H "x-account: user2" $INGRESS_IP/catalogue
-...
-Sockets used: 5 (for perfect keepalive, would be 1)
-Code 200 : 2 (50.0 %)
-Code 429 : 2 (50.0 %)
-```
-
-Or you can use curl from your terminal:
-
-```bash
-curl --request GET "http://${INGRESS_IP}/catalogue" -I --header 'x-plan: BASIC' --header 'x-account: user'
-
-curl --request GET "http://${INGRESS_IP}/catalogue" -I --header 'x-plan: PLUS' --header 'x-account: user'
-```
-
-You can check in redis how keys are stored:
-
-```bash
-export REDIS_POD=$(kubectl get pod -n rate-limit | grep redis | awk '{ print $1 }')
-
-kubectl -n rate-limit exec -it $REDIS_POD -c redis /bin/sh
-
-redis-cli
-
-keys *
-```
-
-#### Local rate limiting
 Envoy supports local rate limiting of L4 connections and HTTP requests. This allows us to apply rate limits at the instance level, in the proxy itself, without calling any other service.
 In this example, we are going to enable local rate limiting for any traffic going through the `catalogues` service. The local rate limit filter’s token bucket is configured to allow 10 requests/min. The filter is also configured to add an x-local-rate-limit response header to requests that are blocked.
 ```bash
 kubectl apply -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml 
 ```
 
-Testing the above scenarios prove that local rate limiting is working
-
+Testing the above scenarios prove that local rate limiting is working. We need the `Fortio` client again so we deploy it.
 ```bash
+kubectl apply -f 4-policy/fortio.yaml
+FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
 kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 4 -qps 0 -n 20 -loglevel Warning http://catalogue/tags
 ```
 
 You shouls get the output below
-
 ```
 Code 200 : 10 (50.0 %)
 Code 429 : 10 (50.0 %)
 ```
+
+We can see that envoy is rate limiting the catalogue service and blocking calls over 10 requests/second.
 
 ### 2. CORS
 Cross-Origin Resource Sharing (CORS) is a method of enforcing client-side access controls on resources by specifying external domains that are able to access certain or all routes of your domain. Browsers use the presence of HTTP headers to determine if a response from a different origin is allowed.
@@ -449,6 +398,7 @@ kubectl apply -f 4-policy/cors/cors-virtual-service.yaml
 Checking now CORS options to confirm that the config effectively took place
 
 ```bash
+export INGRESS_IP=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 curl -I -X OPTIONS -H 'access-control-request-method: PUT' -H 'origin: http://aboullaite.me' http://$INGRESS_IP/catalogue
 #### should return the output below
 HTTP/1.1 200 OK
@@ -465,8 +415,6 @@ content-length: 0
 ```bash
 kubectl apply -f 4-policy/cleanup-virtual-service.yaml
 kubectl delete -f 4-policy/fortio.yaml 
-kubectl delete -f 4-policy/rate-limiting/global/rate-limit-service.yaml
-kubectl delete -f 4-policy/rate-limiting/global/rate-limit-envoy-filter.yaml 
 kubectl delete -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml 
 ```
 
