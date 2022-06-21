@@ -3,15 +3,17 @@ This repo contains the code samples and step by step instructions for the Servic
 
 - [Devoxx Poland 2022](https://devoxx.pl/talk-details/?id=2840)
 
-The code in this repo have been forked from [Mohamed Aboullaite](https://github.com/aboullaite/aboullaite) [service-mesh](https://github.com/aboullaite/service-mesh) repo and adapted to work on GKE with Istio.
+The code in this repo have been forked from [Mohamed Aboullaite](https://github.com/aboullaite/aboullaite) [service-mesh](https://github.com/aboullaite/service-mesh) repo and adapted to work on [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine/) on GCP with Istio.
 
 This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 
 ![Sock Shop app](assets/sock-shop.png)
-## Content
+
+# Content
 - [0. Prepare the environment & Install istio](#0-install-istio)
-- [1. Deployment](#1-deploy-application)
-    - [deploy application](#1-deploy-the-application)
+- [1. App Deployment](#1-app-deployment)
+    - [0. Prepare your namespace](#0-prepare-your-namespace)
+    - [Deploy the app](#1-deploy-the-app)
     - [Configure Istio virtual services & Distination rules](#2-configure-istio-virtual-services--distination-rules)
     - [Configure Istio ingress gateway](#3-configure-istio-ingress-gateway)
     - [Verifying our config](#4-verifying-our-config)
@@ -45,33 +47,33 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 ## 0. Install istio
 At the begining of this workshop, you should have been given credentials for a Google Cloud Platform(GCP) project to use. 
 
-Follow the instructions below to provision a Google Kubernetes Cluster(GKE), deploy Istio and verify the environment is ready to start the workshop
+Follow the instructions below to provision a Google Kubernetes Cluster(GKE), deploy Istio and verify the environment is ready to start the workshop.
 
 1. Login to the Google Cloud Console:
-    * (Ideally) If you are using Google Chrome, use an incognito TAB and open the [GCP console](https://console.cloud.google.com/welcome?project=XXXXXXX). Replace `XXXXXXX` in the URL with the project ID you are given.
+    * (Ideally) If you are using Google Chrome, use an incognito TAB and open the [GCP console](https://console.cloud.google.com/welcome?project=XXXXXXX). Replace `XXXXXXX` in the URL with the PROJECT_ID you are given.
     * If you are using a a different browser open the console with the URL above in a new TAB. 
 
 `PS: incognito helps you keep your already logged in Google profiles clean.`
 
 2. Use the provided credentials to login to the Google Account. This should bring you to the 
-home page of the Google Cloud Console 
+home page of the Google Cloud Console.
 
 3. From the top right part of the page, click on the `Activate Cloud Shell` Button
-![Activate Cloud Shell Button](assets/cloud-shell-icon.png)
+![Activate Cloud Shell Button](assets/cloud-shell-icon.png).
 
-Wait a few moments, it takes a while for the Cloud Shell to be provisioned. You will be using the Cloud Shell for the remaining of this workshop.
+Wait a few moments, it could take a while for the Cloud Shell to be provisioned. You will be using it for the rest of this workshop.
 
 4. Clone this repository in the cloud shell
 ```bash
 git clone https://github.com/boredabdel/istio-workshop-gcp.git
 ```
 
-cd into the repo folder
+cd into the repo folder.
 ```bash 
 cd istio-workshop-gcp
 ```
 
-5. Create a GKE cluster
+5. Create a GKE cluster.
 ```bash
 export PROJECT_ID=`gcloud config get-value project` && \
 export M_TYPE=n1-standard-2 && \
@@ -86,18 +88,18 @@ gcloud container clusters create $CLUSTER_NAME \
 --project $PROJECT_ID
 ```
 
-This command might take a while, you can navigate to the Google Kubernetes Engine page (use the search bar to find it) to check the status of the cluster provisioning, or wait for the command to exit.
+`PS: When you open the Cloud Shell for the first time and after each reload and run the gcloud command, you might be prompted to authorize the API Calls. Simply Click Authorize`.
+
+Provisionning a cluster might take a while(about 5 min), you can navigate to the Kubernetes Engine page (use the search bar to find it) to check the status of the cluster provisioning, or wait for the command to exit.
 
 At this stage you should have a GKE cluster provisionned in your project.
 
 Run the following command to fetch it's credentials.
-
 ```bash
 gcloud container clusters get-credentials istio-workshop-gcp --zone $ZONE
 ```
 
 Run `kubectl` to ensure you have access to the cluster.
-
 ```bash
 kubectl get nodes
 ```
@@ -108,20 +110,21 @@ If you see a list of nodes you are good to go. Otherwise stop here and ask one o
 
 Istio has many [documentated](https://istio.io/latest/docs/setup/getting-started/#download) ways to be deployed. For the purposes of this workshop, we will use the most straightforward method:
 
-- Download the `istioctl` CLI
+Download the `istioctl` CLI.
 ```bash
 curl -L https://istio.io/downloadIstio | sh -
 ```
 
-- Move to the Istio Package directory. For example if the package is `1.14.1`
+Move to the Istio Package directory. For example if the package is `1.14.1`
 ```bash
 cd istio-1.14.1
 ```
 
-- Add the istioctl client to your path (You can make these changes permanent by adding them to your .bashrc or .zshrc)
+Add the istioctl client to your path (You can make these changes permanent by adding them to your ~/.bashrc or ~/.zshrc)
 ```bash
 export PATH=$PWD/bin:$PATH
 ```
+
 - Navigate back to the root of the repo and check istioctl works
 ```bash
 cd ..
@@ -130,7 +133,7 @@ istioctl version
 
 If you get a valid output (the istio version), you are good to progress.
 
-- Now we are ready to deploy Istio to the cluster. We will use the [default profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for this workshop
+Now we are ready to deploy Istio to the cluster. We will use the [default profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for this workshop
 ```bash
 istioctl install --set profile=default -y
 ```
@@ -143,48 +146,55 @@ kubectl get pods -n istio-system
 
 If all pods return a `Running` status, you are good to progress.
 
-## 1. Deployment
-At this stage we are ready to deploy
+To Recap at the end of this section you should have an UP and running GKE cluster on Google Cloud. With Istio deployed (the `istiod` control plane and the `istio-ingressgateway`).
+
+## 1. App Deployment
+At this point we are ready to deploy
 
 ### 0. Prepare your namespace
-
 Before we deploy the app, we need to prepare the namespace where it will be deployed, and label it for automatic sidecar injection. You can read more about this [here](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/) but in a nutshell the label will trigger the Istio control plane to automatically inject the sidecars into each pod in the cluster. So you don't have to do it manually.
 
 ```bash
 kubectl apply -f 1-deploy-app/manifests/sock-shop-ns.yaml 
 ```
 
-### 1. deploy the app
+### 1. Deploy the app
 ```bash
 kubectl apply -f 1-deploy-app/manifests
 ```
 
 Check everything have been deployed properly
 ```bash
-kubectl get pods
+kubectl get pods -n sock-shop
 ```
 
 There should be 14 pods deployed in total. For each of them look at the `Ready` column. It should have `ready_containers/total_containers` values. That colum reports the containers in a ready stat  over the total containers supposed to be in the pod (including the sidecar). The two values should match before you move on. In other terms a `2/2` is good, while a `1/2` means things are still starting.
 
-Wait until all containers are ready before you progress.
+Wait until all containers are ready before you progress. You can track the progress of the containers by running
+```bash
+watch kubectl get pods -n sock-shop
+```
 
-### 2. Configure Istio virtual services & Distination rules
+### 2. Configure Istio Virtualservices & Destinationrules
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
 ```
-Virtual services and Destination rules are  key part of Istio’s traffic routing functionality. You can think of virtual services as how you route your traffic to a given destination, and then you use destination rules to configure what happens to traffic for that destination.
+
+[Virtualservices](https://istio.io/latest/docs/reference/config/networking/virtual-service/#VirtualService) and [Destinationrules](https://istio.io/latest/docs/reference/config/networking/destination-rule/) are key part of Istio’s traffic routing functionality. You can think of `virtualservices` as how you route your traffic to a given destination, and then you use `destinationrules` to configure what happens to traffic for that destination.
 
 ### 3. Configure the Istio ingress gateway
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
 ```
-An Ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration.
+An Ingress Gateway describes a load balancer operating at the edge of the mesh that receives incoming HTTP/TCP connections. It configures exposed ports, protocols, etc. but, unlike Kubernetes Ingress Resources, It does not include any traffic routing configuration. That's where the `Gateway` Object you deployed comes into play. It describes how traffic is routed from the edge of the mesh to inside 
 
 ### 4. Verifying the config
 ```bash
-$ istioctl proxy-status
+istioctl proxy-status
 ```
-Using the `istioctl proxy-status` command allows us to get an overview of our mesh. If you suspect one of your sidecars isn’t receiving configuration or is not synchronized, proxy-status will let you know. 
+Using the `istioctl proxy-status` command allows us to get an overview of our mesh. If you suspect one of your sidecars isn’t receiving configuration or is not synchronized, proxy-status will let you know.
+
+You can ignore the `ECDS` column.
 
 If everything is fine, run the below command to get the LoadBalancer IP:Port
 ```bash
