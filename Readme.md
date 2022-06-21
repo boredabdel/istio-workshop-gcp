@@ -30,11 +30,9 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
     - [4. Timeouts](#4-timeouts)
 - [4. Policy](#4-policy)
     - [1. Rate limiting](#1-rate-limiting)
-        - [Global rate limiting](#global-rate-limiting)
-        - [Local rate limiting](#local-rate-limiting)
     - [2. CORS](#2-cors)
 - [5. Security](#5-Security)
-    - [1. mutual TLS authentication](#1-mutual-tls-authentication)
+    - [1. Mutual TLS authentication](#1-mutual-tls-authentication)
     - [2. Authorization for HTTP traffic](#2-authorization-for-http-traffic)
     - [3. JWT](#3-jwt)
 - [6. Observability](#6-observability)
@@ -419,7 +417,7 @@ kubectl delete -f 4-policy/rate-limiting/local/rate-limit-envoy-filter.yaml
 
 ## 5. Security
 
-### 1. mutual TLS authentication
+### 1. Mutual TLS authentication
 With all of the identity certificates (SVIDs) distributed to workloads across the system, how do we actually use them to verify the identity of the servers with which we’re communicating and perform authentication and authorization? This is where mTLS comes into play.
 
 mTLS (mutual TLS) is TLS in which both parties, client and server, present certificates to each other. This allows the client to verify the identity of the server, like normal TLS, but it also allows the server to verify the identity of the client attempting to establish the connection.
