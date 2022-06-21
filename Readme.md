@@ -13,10 +13,10 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 - [0. Prepare the environment & Install istio](#0-prepare-the-environment-and-install-istio)
 - [1. App Deployment](#1-app-deployment)
     - [0. Prepare your namespace](#0-prepare-your-namespace)
-    - [Deploy the app](#1-deploy-the-app)
-    - [Configure Istio virtual services & Distination rules](#2-configure-istio-virtual-services--distination-rules)
-    - [Configure Istio ingress gateway](#3-configure-istio-ingress-gateway)
-    - [Verifying our config](#4-verifying-our-config)
+    - [1. Deploy the app](#1-deploy-the-app)
+    - [2. Configure Istio virtual services & Distination rules](#2-configure-istio-virtualservices--distinationrules)
+    - [3. Configure the Istio Ingress Gateway](#3-configure-the-istio-ingress-gateway)
+    - [4. Verifying the config](#4-verifying-the-config)
     - [5. User accounts](#5-user-accounts)
 - [2. Traffic Management](#2-traffic-management)
     - [1. Blue/Green Deployment](#1-bluegreen-deployment)
@@ -182,7 +182,7 @@ kubectl apply -f 1-deploy-app/sockshop-virtual-services.yaml
 
 [Virtualservices](https://istio.io/latest/docs/reference/config/networking/virtual-service/#VirtualService) and [Destinationrules](https://istio.io/latest/docs/reference/config/networking/destination-rule/) are key part of Istio’s traffic routing functionality. You can think of `virtualservices` as how you route your traffic to a given destination, and then you use `destinationrules` to configure what happens to traffic for that destination.
 
-### 3. Configure the Istio ingress gateway
+### 3. Configure the Istio Ingress Gateway
 ```bash
 kubectl apply -f 1-deploy-app/sockshop-gateway.yaml
 ```
