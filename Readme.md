@@ -14,7 +14,7 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
 - [1. App Deployment](#1-app-deployment)
     - [0. Prepare your namespace](#0-prepare-your-namespace)
     - [1. Deploy the app](#1-deploy-the-app)
-    - [2. Configure Istio Virtualservices & Destinationrules](#2-configure-istio-virtualservices--distinationrules)
+    - [2. Configure Istio Virtualservices & Destinationrules](#2-configure-istio-Virtualservices-&-destinationrules)
     - [3. Configure the Istio Ingress Gateway](#3-configure-the-istio-ingress-gateway)
     - [4. Verifying the config](#4-verifying-the-config)
     - [5. User accounts](#5-user-accounts)
