@@ -37,7 +37,7 @@ This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
     - [3. JWT](#3-jwt)
 - [6. Observability](#6-observability)
     - [1. Prometheus](#1-prometheus)
-    - [2. Grafana](#-2-grafana)
+    - [2. Grafana](#2-grafana)
     - [3. Tracing](#3-tracing)
     - [4. Kiali](#4-kiali)
 
