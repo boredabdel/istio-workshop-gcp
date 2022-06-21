@@ -289,35 +289,36 @@ Fault injection is an incredibly powerful way to test and build reliable distrib
 Istio allows you to configure faults for HTTP traffic, injecting arbitrary delays or returning specific response codes (e.g., 500) for some percentage of traffic.
 
 #### Delay fault
-In this example. we will inject five seconds delay for all traffic calling the `catalogue` service. This is a great way to reliably test how our app behaves when the network connectivity is unreliable.
+In this example. we will inject five seconds delay for all traffic calling the `catalogue` service. This is a great way to test how our app behaves when the network connectivity is unreliable.
 ```bash
 kubectl apply -f 3-resiliency/fault-injection/delay-fault-injection-virtual-service.yaml
 ```
-Open the application and you can see that it takes now longer to render catalogs
+Open the application and you can see that it takes now longer to render the catalogue.
 
 #### Abort fault
-Replying to clients with specific response codes, like a 429 or a 500, is also great for testing. For example, it can be challenging to programmatically test how your application behaves when a third-party service that you depend on begins to fail. Using Istio, you can write a set of reliable end-to-end tests of your application’s behavior in case one of its dependencies is unreliable.
+Replying to clients with specific response codes, like a 429 or a 500, is also great for testing. For example, it can be challenging to programmatically test how your application behaves when a third-party service that you depend on begins to fail. Using Istio, you can write a set of end-to-end tests to check how your application behaves in cases where one of its dependencies is unreliable.
 
 For example, we can simulate 30% of requests to `catalogue` service is failing at runtime with a 500 response code.
 ```bash
 kubectl apply -f 3-resiliency/fault-injection/abort-fault-injection-virtual-service.yaml 
 ```
 
-Refresh the page a couple of times. You'll notice that sometimes it doesn't return the json list of catalogs
+Refresh the page a couple of times. You'll notice that sometimes the catalogue doesn't render.
 
 ### 2. Circuit Breaking
-Circuit breaking is a pattern of protecting calls (e.g., network calls to a remote service) behind a `circuit breaker`. If the protected call returns too many errors, we `trip` the circuit breaker and return errors to the caller without executing the protected call. This was we don't DDOS the remote service and block the caller. 
+Circuit breaking is a pattern of protecting calls (e.g., network calls to a remote service) behind a `circuit breaker`. If the protected call returns too many errors, we `trip` the circuit breaker and return errors to the caller without executing the protected call. This way we don't DDOS the remote service and block the caller.
 
 For example, we can configure circuit breaking rules for the `catalogue` service and test the configuration by intentionally `tripping` the circuit breaker. To achieve this, we will use a load-testing client called [fortio](https://github.com/fortio/fortio). Fortio lets us control the number of connections, concurrency, and delays for outgoing HTTP calls.
 
 ```bash
 kubectl apply -f 3-resiliency/circuit-breaking/circuit-breaking.yaml 
 kubectl apply -f 3-resiliency/circuit-breaking/fortio.yaml 
-FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')  
+FORTIO_POD=$(kubectl get pod -n sock-shop| grep fortio | awk '{ print $1 }')
+### Wait few minutes for the Fortio pod to be up
 kubectl -n sock-shop exec -it $FORTIO_POD -- /usr/bin/fortio load -c 4 -qps 0 -n 40 -loglevel Warning http://catalogue/tags
 ```
 
-In the `DestinationRule` settings, we specified `maxConnections: 1` and `http1MaxPendingRequests: 1`. They indicate that if we exceed more than one connection and request concurrently, you should see some failures when the istio-proxy opens the circuit for further requests and connections. 
+In the `DestinationRule` settings, we specified `maxConnections: 1` and `http1MaxPendingRequests: 1`. They indicate that if we exceed more than one connection and request concurrently, you should see some failures when the istio-proxy trips the circuit for further requests and connections. 
 
 While testing, you should get something similar to this output:
 
@@ -330,7 +331,7 @@ Code 503 : 26 (65.0 %)
 This is because we run fortio with 4 concurrent requests (`-c 4`) and 40 calls per request (`-n 40`). The circuit was tripped.
 
 ### 3. Retries
-Every system has transient failures: network buffers overflow, a server shutting down drops requests, a downstream system fails, and so on.
+Every system has transient failures: network buffers overflow, a server shutting down and dropping requests, a downstream system failing, and so on.
 
 Istio gives you the ability to configure retries globally for all services in your mesh. More significantally, it allows you to control those retry strategies at runtime via configuration, so you can change client behavior on the fly.
 
