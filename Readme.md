@@ -550,7 +550,7 @@ Next go back to the Prometheus webpage and let's query for the total requests to
 
 Let's deploy it and use port-forward to see look at some graphs:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/grafana.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/grafana.yaml
 ###Wait few minutes until the Grafana pod is Running
 kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=grafana -o jsonpath='{.items[0].metadata.name}') 8080:3000
 ```
@@ -568,7 +568,7 @@ Istio-enabled applications can be configured to collect trace spans using, for i
 
 Let's see how that works in practice. We need to install Jaeger and port-forward it to our browswer.
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/jaeger.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/jaeger.yaml
 ###Wait few minutes until the Jaeger pod is Running
 kubectl port-forward -n istio-system $(kubectl get pod -n istio-system -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 8080:16686
 ```
@@ -590,7 +590,7 @@ For that we can Kiali which is a visual Graph that allows use to see dependencie
 
 So let's deploy Kiali and port-forward it
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/kiali.yaml
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/kiali.yaml
 ###Wait few minutes until the Kiali pod is Running
 kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=kiali -o jsonpath='{.items[0].metadata.name}') 8080:20001
 ```
@@ -609,10 +609,10 @@ To examine the details about the Istio configuration, click on the Applications,
 ### 4. Clean up
 ```bash
 kubectl delete -f 6-observability/fortio.yaml
-kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/prometheus.yaml
-kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/grafana.yaml
-kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/kiali.yaml
-kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.14/samples/addons/jaeger.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/prometheus.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/grafana.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/kiali.yaml
+kubectl delete -f https://raw.githubusercontent.com/istio/istio/release-1.15/samples/addons/jaeger.yaml
 ```
 
 --- 
