@@ -5,7 +5,7 @@ This repo contains the code samples and step by step instructions for the Servic
 
 The code in this repo have been forked from [Mohamed Aboullaite](https://github.com/aboullaite/aboullaite) [service-mesh](https://github.com/aboullaite/service-mesh) repo and adapted to work on [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine/) on GCP with Istio.
 
-This demo is deployed and tested with `kubernetes 1.22` and `istio 1.14.1`
+This demo is deployed and tested with `kubernetes 1.24` and `istio 1.15.2`
 
 ![Sock Shop app](assets/sock-shop.png)
 
@@ -115,9 +115,9 @@ Download the `istioctl` CLI.
 curl -L https://istio.io/downloadIstio | sh -
 ```
 
-Move to the Istio Package directory. For example if the package is `1.14.1`
+Move to the Istio Package directory. For example if the package is `1.15.2`
 ```bash
-cd istio-1.14.1
+cd istio-1.15.2
 ```
 
 Add the istioctl client to your path (You can make these changes permanent by adding them to your ~/.bashrc or ~/.zshrc)
