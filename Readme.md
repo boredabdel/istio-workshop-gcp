@@ -55,8 +55,10 @@ Follow the instructions below to provision a Google Kubernetes Cluster(GKE), dep
 2. Use the provided credentials to login to the Google Account. This should bring you to the 
 home page of the Google Cloud Console.
 
-3. From the top right part of the page, click on the `Activate Cloud Shell` Button
+3. From the top right part of the page, click on the `Activate Cloud Shell Button`
 ![Activate Cloud Shell Button](assets/cloud-shell-icon.png).
+
+`PS: Google Cloud is rolling out a new interface. So the screenshots in this repo might look different but the logos should look the same.`
 
 Wait a few moments, it could take a while for the Cloud Shell to be provisioned. You will be using it for the rest of this workshop.
 
